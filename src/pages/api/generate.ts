@@ -1,7 +1,7 @@
 // #vercel-disable-blocks
 import { ProxyAgent, fetch } from 'undici'
 // #vercel-end
-import { generatePayload, parseOpenAIStream } from '@/utils/openAI'
+import { generatePayload, parseOpenAIStream, generateImage } from '@/utils/openAI'
 import { verifySignature } from '@/utils/auth'
 import type { APIRoute } from 'astro'
 
@@ -17,10 +17,11 @@ export const post: APIRoute = async(context) => {
   if (!messages) {
     return new Response(JSON.stringify({
       error: {
-        message: 'No input text.',
+        message: '请输入内容',
       },
     }), { status: 400 })
   }
+
   if (sitePassword && !(sitePassword === pass || passList.includes(pass))) {
     return new Response(JSON.stringify({
       error: {
@@ -35,7 +36,17 @@ export const post: APIRoute = async(context) => {
       },
     }), { status: 401 })
   }
-  const initOptions = generatePayload(apiKey, messages)
+
+  let initOptions = ''
+  if(messages[messages.length-1].content.indexOf('@image:') === 0){
+    initOptions = generateImage(apiKey, messages)
+  }else{
+    initOptions = generatePayload(apiKey, messages)
+  }
+  
+
+  
+
   // #vercel-disable-blocks
   if (httpsProxy)
     initOptions.dispatcher = new ProxyAgent(httpsProxy)
@@ -43,15 +54,35 @@ export const post: APIRoute = async(context) => {
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-expect-error
-  const response = await fetch(`${baseUrl}/v1/chat/completions`, initOptions).catch((err: Error) => {
-    console.error(err)
-    return new Response(JSON.stringify({
-      error: {
-        code: err.name,
-        message: err.message,
-      },
-    }), { status: 500 })
-  }) as Response
 
-  return parseOpenAIStream(response) as Response
+  if(messages[messages.length-1].content.indexOf('@image:') === 0){
+    const res =  await fetch(`${baseUrl}/v1/images/generations`, initOptions).catch((err: Error) => {
+      console.error(err)
+      return new Response(JSON.stringify({
+        error: {
+          code: err.name,
+          message: err.message,
+        },
+      }), { status: 500 })
+    }) as Response
+
+    return new Response(JSON.stringify({
+      code: 200,
+      messages: res.data[0].url
+      
+    }), { status: 200 })
+    
+  }else{
+    const response = await fetch(`${baseUrl}/v1/chat/completions`, initOptions).catch((err: Error) => {
+      console.error(err)
+      return new Response(JSON.stringify({
+        error: {
+          code: err.name,
+          message: err.message,
+        },
+      }), { status: 500 })
+    }) as Response
+
+    return parseOpenAIStream(response) as Response
+  }
 }
