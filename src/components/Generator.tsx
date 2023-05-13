@@ -198,7 +198,7 @@ export default () => {
   }
 
   return (
-    <div my-6>
+    <div my-50>
       <SystemRoleSettings
         canEdit={() => messageList().length === 0}
         systemRoleEditing={systemRoleEditing}
@@ -227,7 +227,7 @@ export default () => {
         when={!loading()}
         fallback={() => (
           <div class="gen-cb-wrapper">
-            <span>AI is thinking...</span>
+            <span>AI 思考中...</span>
             <div class="gen-cb-stop" onClick={stopStreamFetch}>Stop</div>
           </div>
         )}
@@ -237,7 +237,7 @@ export default () => {
             ref={inputRef!}
             disabled={systemRoleEditing()}
             onKeyDown={handleKeydown}
-            placeholder="Enter something..."
+            placeholder="输入你的问题..."
             autocomplete="off"
             autofocus
             onInput={() => {
